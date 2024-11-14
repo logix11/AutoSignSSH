@@ -128,7 +128,6 @@ default path) :: "
 		echo "ERROR: could not copy sshd_config, exiting..."
 		exit $WRONG_PATH
 	fi
-	pwd=$(pwd)
 	printf "Setting it to trust the CA..."
 	sed -i "1s/^/TrustedUserCAKeys\n/" ../sshd_config; # Prepend 
 		# TrustedUserCAKeys to the beginning of the first line of that file, 
@@ -185,14 +184,18 @@ Setting it to trust the CA..."
 
 	ca_host_key=$(<ca_host_key.pub)
 	read -rp "Enter your CA's domain name :: " dn
-	if sed -i "1s/^/@cert-authority ($dn) ($ca_host_key)" ../ssh_known_hosts;
+	if echo "@cert-authority ($dn) ($ca_host_key)" >> ../ssh_known_hosts;
 	then
-		echo "done"
+		echo "DONE."
 	else
 		echo "ERROR: could not edit on sshd_config, exiting..."
 		exit $SED_ERROR
 	fi
 
+	echo "The setup has finished successfully, you can start signing and issuing
+certificates after the host and users receive their configuration files, i.e.,
+the sshd_config and ssh_known_hosts"
+	return
 }
 
 # main() {
@@ -220,7 +223,7 @@ if ! command -v ssh &> /dev/null; then
 	exit $SSH_FAILURE
 fi
 
-printf "It is indeed installed.
+echo "It is indeed installed.
 
 --------------------------------------------------------------------------------
 
@@ -228,11 +231,22 @@ Select an option.
 [0] Exit.
 [1] Establish a CA.
 [2] Manage a CA
+"
 
-Your input :: " 
-read -r choice
-
-if [[ $choice == "1" ]];
-then
-	init
-fi
+while : ;
+do
+	read -rp "Your input :: " choice
+	if [[ $choice == "0" ]];
+	then
+		echo Exiting...
+		exit 0
+	elif [[ $choice == "1" ]];
+	then
+		init
+	elif [[ $choice == "2" ]];
+	then
+		echo Not available yet
+	else
+		echo Invalid input. Try again.		
+	fi
+done
