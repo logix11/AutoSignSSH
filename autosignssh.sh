@@ -11,6 +11,7 @@ SED_ERROR=6
 init(){
 	printf "The script will establish the CA in this location, proceed? [Y/n] :: "
 
+	# This loop is to ensure that the input is valid.
 	while :
 	do
 		read -r choice
@@ -106,6 +107,7 @@ Setting access controls..."
 Configuring the OpenSSH server...
 Enter the path to sshd_config configuration file (or leave it blank to use the 
 default path) :: " 
+	# This loop is to ensure that the input is valid
 	while :
 	do
 		read -r sshd_path
@@ -123,6 +125,7 @@ default path) :: "
 			break
 		fi
 	done
+
 	printf "Copying sshd_config configuration file..."
 	
 	if cp "$sshd_path" ../sshd_config
@@ -132,6 +135,7 @@ default path) :: "
 		echo "ERROR: could not copy sshd_config, exiting..."
 		exit $WRONG_PATH
 	fi
+
 	printf "Setting it to trust the CA..."
 	sed -i "1s/^/TrustedUserCAKeys\n/" ../sshd_config # Prepend 
 		# TrustedUserCAKeys to the beginning of the first line of that file, 
@@ -145,10 +149,13 @@ Now put this file back to production directory."
 		echo "ERROR: could not edit on sshd_config, exiting..." 
 		exit $SED_ERROR
 	fi
+
 	printf "
 Configuring the OpenSSH client...
 Enter the path to ssh_known_hosts file (or leave it blank to use the default 
 path) :: "
+
+	# This loop is to ensure that the input is a valid one.
 	while :
 	do
 		read -r ssh_path
@@ -201,6 +208,90 @@ Setting it to trust the CA..."
 certificates after the host and users receive their configuration files, i.e.,
 the sshd_config and ssh_known_hosts"
 	return
+}
+
+gen_ecdsa(){
+	# Ensuring that the input is valid.
+	while :
+	do
+		read -rp "Enter key's bit-length:
+[0] Return to menu.
+[1] 256-bit long.
+[2] 384-bit long.
+[3] 521-bit long.
+
+Your input :: " bit
+		if [[ $bit == "0" ]]
+		then
+			echo Returning to menu...
+			break
+		elif [[ $bit -gt "3" ]]
+		then
+			printf "Invalid input. Try again"
+		else
+			echo "Generating the key, it'll prompt you for an encryption passphrase."
+			if [[ $bit == "1" ]]
+			then
+				bits=256
+			elif [[ $bit -gt "2" ]]
+			then
+				bits=348
+			else
+				bits=521
+			fi
+			ssh-keygen -a "$rounds" -b $bits -f "$1"/id_ecdsa -Z
+			echo "Key generation: DONE"
+			break
+		fi
+	done
+}
+
+gen_static() {
+	echo static
+}
+
+gen_rsa(){
+	echo rsa
+}
+
+generate_key(){
+	while :
+	do
+	read -rp "Which cryptographic key you want to generate?
+	[0] Return to menu.
+	[1] ECDSA.
+	[2] ECDSA-SK.
+	[3] ED25519.
+	[4] ED25519-SK.
+	[5] RSA.
+Your input :: " key
+		if [[ $key == "0" ]]
+		then
+			echo Returning to menu...
+			break
+		elif [[ $key -gt "5" ]] # if it is an invalid input.
+		then
+			printf "Invalid input. Try again :: "
+
+		else # If it is valid, and not zero then proceed.
+			read -rp \
+"Enter number of rounds (leave blank to set the default value) :: " rounds
+			if [[ -z $rounds ]] # Default value is 16
+			then
+				rounds=16
+			fi
+			
+			if [[ $key == "1" ]] # ECDSA Has predefined key bit lengths
+			then
+				gen_ecdsa "$1"
+			elif [[ $key == "2" ||  $key == "3" ||  $key == "4" ]] # They have
+			then 		# static length
+				gen_static
+			else
+				gen_rsa
+			fi
+		fi
+	done
 }
 
 manage(){
@@ -257,26 +348,19 @@ must guide the program to find that directory. Is the current directory it?
 		if [[ $choice == "0" ]]
 		then
 			exit 0
-		elif [[ $choice == "1" ]]
+		elif [[ $choice -gt 6 ]]
 		then
-			echo generate
-		elif [[ $choice == "2" ]]
-		then
-			echo sign user
-		elif [[ $choice == "3" ]]
-		then
-			echo sign host
-		elif [[ $choice == "4" ]]
-		then
-			echo verify
-		elif [[ $choice == "5" ]] 
-		then
-			echo revoke
-		elif [[ $choice == "6" ]]
-		then
-			echo print
+			echo Invalid input. Try again
 		else
-			echo Invalid Input. Try again
+			if [[ $choice == 2 ]]
+			then
+				generate_key "hosts"
+			elif [[ $choice == 3 ]]
+			then
+				generate_key "users"
+			else
+				generate_key
+			fi
 		fi
 	done
 }
