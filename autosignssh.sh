@@ -11,13 +11,16 @@ SED_ERROR=6
 init(){
 	printf "The script will establish the CA in this location, proceed? [Y/n] :: "
 
-	while : ; do
+	while :
+	do
 		read -r choice
-		if [[ $choice == "n" || $choice == "N" ]] ; then # Wrong directory
+		if [[ $choice == "n" || $choice == "N" ]]
+		then # Wrong directory
 			echo "Wrong directory, exiting..."
 			exit $WRONG_PATH
 
-		elif [[ $choice != "y" && $choice != "Y" ]] ; then # Invalid input
+		elif [[ $choice != "y" && $choice != "Y" ]]
+		then # Invalid input
 			printf "Invalid input. Try again :: "
 
 		else # right directory
@@ -27,7 +30,7 @@ init(){
 	printf "Greate! Let's keep going
 
 Task: creating directories..."
-	if mkdir -p sshca/{ca,hosts,users}; 
+	if mkdir -p sshca/{ca,hosts,users}
 	then
 		echo "DONE."
 	else
@@ -42,7 +45,7 @@ users/	Contains the users' certificates.
 --------------------------------------------------------------------------------
 	"
 
-	if cd sshca/ca; 
+	if cd sshca/ca
 	then 
 		echo "Navigating to the direcotry...DONE"
 	else
@@ -56,7 +59,7 @@ an encryption passphrase.
 Remember the passphrase, or use a password manager.
 	"
 
-	if ssh-keygen -a 16 -b 256 -f ca_host_key -t ecdsa -Z aes128-gcm@openssh.com;
+	if ssh-keygen -a 16 -b 256 -f ca_host_key -t ecdsa -Z aes128-gcm@openssh.com
 	then 
 		echo "Generation of the hosts' key: DONE."
 	else
@@ -67,7 +70,7 @@ Remember the passphrase, or use a password manager.
 	echo "
 Setting access controls... This reuires the root password."
 
-	if sudo chown root:root ca_host_key* && sudo chmod 600 ca_host_key;
+	if sudo chown root:root ca_host_key* && sudo chmod 600 ca_host_key
 	then 
 		echo "Setting access controls to the hosts' key: DONE."
 	else
@@ -80,7 +83,7 @@ Setting access controls... This reuires the root password."
 
 Generating a new private key for the users."
 
-	if ssh-keygen -a 16 -b 256 -f ca_user_key -t ecdsa -Z aes128-gcm@openssh.com;
+	if ssh-keygen -a 16 -b 256 -f ca_user_key -t ecdsa -Z aes128-gcm@openssh.com
 	then
 		echo "Generation of the users' key: DONE."
 	else
@@ -90,7 +93,7 @@ Generating a new private key for the users."
 	printf "
 Setting access controls..."
 
-	if sudo chown root:root ca_user_key* && sudo chmod 600 ca_user_key;
+	if sudo chown root:root ca_user_key* && sudo chmod 600 ca_user_key
 	then
 		echo "Setting access controls to the users' key: DONE."
 	else
@@ -103,15 +106,16 @@ Setting access controls..."
 Configuring the OpenSSH server...
 Enter the path to sshd_config configuration file (or leave it blank to use the 
 default path) :: " 
-	while : ; do
+	while :
+	do
 		read -r sshd_path
 
-		if [[ -z $sshd_path ]]; 
+		if [[ -z $sshd_path ]]
 		then
 			sshd_path="/etc/ssh/sshd_config"
 			echo "Using default path..."
 			break
-		elif [[ ! -e "$sshd_path" ]];
+		elif [[ ! -e "$sshd_path" ]]
 		then
 			echo "Invalid path. Try again"
 		else
@@ -121,7 +125,7 @@ default path) :: "
 	done
 	printf "Copying sshd_config configuration file..."
 	
-	if cp "$sshd_path" ../sshd_config;
+	if cp "$sshd_path" ../sshd_config
 	then
 		echo DONE
 	else
@@ -129,11 +133,11 @@ default path) :: "
 		exit $WRONG_PATH
 	fi
 	printf "Setting it to trust the CA..."
-	sed -i "1s/^/TrustedUserCAKeys\n/" ../sshd_config; # Prepend 
+	sed -i "1s/^/TrustedUserCAKeys\n/" ../sshd_config # Prepend 
 		# TrustedUserCAKeys to the beginning of the first line of that file, 
 		# and theeeeeeeeeeeeeeeeeeeeeeeeeeeeeen replace it.
 		# I could not reduce the complexity, sorry.
-	if sed -i "/TrustedUserCAKeys/c\\TrustedUserCAKeys $(pwd)/ca_user_key" ../sshd_config;
+	if sed -i "/TrustedUserCAKeys/c\\TrustedUserCAKeys $(pwd)/ca_user_key" ../sshd_config
 	then
 		echo "DONE.
 Now put this file back to production directory."
@@ -145,15 +149,16 @@ Now put this file back to production directory."
 Configuring the OpenSSH client...
 Enter the path to ssh_known_hosts file (or leave it blank to use the default 
 path) :: "
-	while : ; do
+	while :
+	do
 		read -r ssh_path
 
-		if [[ -z $ssh_path ]]; 
+		if [[ -z $ssh_path ]]
 		then
 			ssh_path="/etc/ssh/ssh_known_hosts"
 			echo "Using default path..."
 			break
-		elif [[ ! -e "$ssh_path" ]];
+		elif [[ ! -e "$ssh_path" ]]
 		then
 			echo "Invalid path. Try again"
 		else
@@ -162,13 +167,13 @@ path) :: "
 		fi
 	done
 	printf "Copying sshd_ssh_known_hosts file..."
-	if cp "$ssh_path" ../ssh_known_hosts;
+	if cp "$ssh_path" ../ssh_known_hosts
 	then
 		echo "DONE"
 	else
 		printf "ERROR: could not copy sshd_config, attempting to create a local 
 one..."
-		if touch ../ssh_known_hosts;
+		if touch ../ssh_known_hosts
 		then
 			echo DONE
 		else
@@ -183,8 +188,8 @@ one..."
 Setting it to trust the CA..."
 
 	ca_host_key=$(<ca_host_key.pub)
-	read -rp "Enter your CA's domain name :: " dn
-	if echo "@cert-authority ($dn) ($ca_host_key)" >> ../ssh_known_hosts;
+	read -rp "Enter your CA's domain name (or * for any) :: " dn
+	if echo "@cert-authority ($dn) ($ca_host_key)" >> ../ssh_known_hosts
 	then
 		echo "DONE."
 	else
@@ -196,6 +201,84 @@ Setting it to trust the CA..."
 certificates after the host and users receive their configuration files, i.e.,
 the sshd_config and ssh_known_hosts"
 	return
+}
+
+manage(){
+	printf \
+"This script must be running in the SSH CA's home directory, i.e., in the sshca/ 
+directory that was created earlier. If this condition is not satisfied, then you
+must guide the program to find that directory. Is the current directory it? 
+[Y/n]"
+	read -r condition
+	while :
+	do
+		if [[ $condition == "n" || $condition == "N" ]]
+		then
+			printf \
+"Enter the path to the directory (or leave blank to exit) :: "
+			while :
+			do
+				read -r path
+				if [[ ! -d $path ]]
+				then
+					printf "Invalid path. Try again :: "
+				elif cd "$path"
+				then
+					echo "Moved to the sshca/ directory"
+					break
+				else
+					echo Exiting...
+					exit $WRONG_PATH
+				fi
+			done
+			break
+		elif [[ $condition == "y" || $condition == "Y" ]]
+		then
+			echo Good job.
+			break
+		else
+			printf "Invalid input. Try again :: "
+		fi
+	done
+	echo "Proceeding..."
+	while :
+	do
+		printf "Choose an option.
+	[0] Exit.
+	[1] Generate a private key.
+	[2] Sign on a user's key.
+	[3] Sign on a host's key.
+	[4] Verify a certificate.
+	[5] Revoke a certificate.
+	[6] Print out a certificate.
+	
+	Your input :: "
+		read -r choice
+		if [[ $choice == "0" ]]
+		then
+			exit 0
+		elif [[ $choice == "1" ]]
+		then
+			echo generate
+		elif [[ $choice == "2" ]]
+		then
+			echo sign user
+		elif [[ $choice == "3" ]]
+		then
+			echo sign host
+		elif [[ $choice == "4" ]]
+		then
+			echo verify
+		elif [[ $choice == "5" ]] 
+		then
+			echo revoke
+		elif [[ $choice == "6" ]]
+		then
+			echo print
+		else
+			echo Invalid Input. Try again
+		fi
+	done
 }
 
 # main() {
@@ -216,36 +299,36 @@ Authority (CA) and manage it.
 Ensure that OpenSSH is installed before running this script.
 "
 
-dnf search openssh &> /dev/null || (echo "No OpenSSH, exiting"; \
-									exit $SSH_FAILURE)
-if ! command -v ssh &> /dev/null; then
+if ! command -v ssh &> /dev/null
+then
 	echo "No OpenSSH, exiting"
 	exit $SSH_FAILURE
 fi
 
-echo "It is indeed installed.
+echo "It is indeed installed."
 
+while :
+do
+	printf "
 --------------------------------------------------------------------------------
 
 Select an option.
-[0] Exit.
-[1] Establish a CA.
-[2] Manage a CA
-"
-
-while : ;
-do
-	read -rp "Your input :: " choice
-	if [[ $choice == "0" ]];
+	[0] Exit.
+	[1] Establish a CA.
+	[2] Manage a CA
+	
+	Your input :: "
+	read -r choice
+	if [[ $choice == "0" ]]
 	then
 		echo Exiting...
 		exit 0
-	elif [[ $choice == "1" ]];
+	elif [[ $choice == "1" ]]
 	then
 		init
-	elif [[ $choice == "2" ]];
+	elif [[ $choice == "2" ]]
 	then
-		echo Not available yet
+		manage
 	else
 		echo Invalid input. Try again.		
 	fi
