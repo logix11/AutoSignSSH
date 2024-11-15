@@ -207,99 +207,222 @@ Setting it to trust the CA..."
 	echo "The setup has finished successfully, you can start signing and issuing
 certificates after the host and users receive their configuration files, i.e.,
 the sshd_config and ssh_known_hosts"
-	return
+	return 0
 }
 
 gen_ecdsa(){
 	# Ensuring that the input is valid.
 	while :
 	do
-		read -rp "Enter key's bit-length:
-[0] Return to menu.
-[1] 256-bit long.
-[2] 384-bit long.
-[3] 521-bit long.
+		read -rp "
+--------------------------------------------------------------------------------
 
-Your input :: " bit
+Enter key's bit-length:
+	[0] Return to menu.
+	[1] 256-bit long.
+	[2] 384-bit long.
+	[3] 521-bit long.
+
+	Your input :: " bit
 		if [[ $bit == "0" ]]
 		then
 			echo Returning to menu...
-			break
+			return 0
 		elif [[ $bit -gt "3" ]]
 		then
 			printf "Invalid input. Try again"
 		else
+		
 			echo "Generating the key, it'll prompt you for an encryption passphrase."
 			if [[ $bit == "1" ]]
 			then
-				bits=256
+				bit=256
 			elif [[ $bit -gt "2" ]]
 			then
-				bits=348
+				bit=384
 			else
-				bits=521
+				bit=521
+			fi 
+			if ssh-keygen -a "$1" -b "$bit" -f "$2"/id_ecdsa -t ecdsa \
+			-Z aes128-gcm@openssh.com
+			then
+				printf "Key generation: DONE
+Setting access controls..."
+				if chmod 600 "$2"/id_ecdsa
+				then
+					echo DONE.
+				else
+					echo ERROR: setting access controls failed, exiting...
+					exit $PERMS_ERROR
+				fi
+			else
+				echo failed to run ssh-keygen, exiting...
+				exit $SSH_FAILURE
 			fi
-			ssh-keygen -a "$rounds" -b $bits -f "$1"/id_ecdsa -Z
-			echo "Key generation: DONE"
 			break
 		fi
 	done
+	return 0
 }
 
 gen_static() {
-	echo static
+	echo "
+--------------------------------------------------------------------------------	
+
+Generating the key, it'll prompt you for an encryption passphrase."
+	if ssh-keygen -a "$1" -f "$2"/"$3" -t "$3" -Z aes128-gcm@openssh.com
+	then
+		printf "Key generation: DONE
+Setting access controls..."
+		if chmod 600 "$2"/"$3"
+		then
+			echo DONE.
+		else
+			echo ERROR: setting access controls failed, exiting...
+			exit $PERMS_ERROR
+		fi
+	else
+		echo ERROR: failed to run ssh-keygen, exiting...
+		exit $SSH_FAILURE
+	fi
+	return 0
 }
 
 gen_rsa(){
-	echo rsa
+	while :
+	do
+		read -rp "
+	--------------------------------------------------------------------------------
+
+Choose a key length:
+	
+	[0] Return to menu.
+	[1] 2048-bits.
+	[2] 3072-bits (recommended).
+	[3] 4096.
+
+	Your input :: " bits
+		if [[ $bits == 0 ]]
+		then
+			return 0
+		elif [[ $bits == 1 ]]
+		then
+			bits=2048
+			break
+		elif [[ $bits == 2 ]]
+		then
+			bits=3072
+			break
+		elif [[ $bits == 3 ]]
+		then
+			bits=4096
+			break
+		else
+			echo Invalid input. Try again.
+		fi
+	done
+	
+	echo "
+	Generating the key, it'll prompt you for an encryption passphrase."
+	if ssh-keygen -a "$1" -f "$2"/id_rsa -b "$bits" -t rsa -Z aes128-gcm@openssh.com
+	then
+		printf "Key generation: DONE
+Setting access controls..."
+		if chmod 600 "$2"/id_rsa
+		then
+			echo DONE.
+		else
+			echo ERROR: setting access controls failed, exiting...
+			exit $PERMS_ERROR
+		fi 
+	else
+		echo ERROR: echo failed to run ssh-keygen, exiting...
+		exit $SSH_FAILURE
+	fi
+	return 0
 }
 
 generate_key(){
 	while :
 	do
-	read -rp "Which cryptographic key you want to generate?
+		read -rp "
+--------------------------------------------------------------------------------
+
+Which cryptographic key you want to generate?
 	[0] Return to menu.
 	[1] ECDSA.
 	[2] ECDSA-SK.
 	[3] ED25519.
 	[4] ED25519-SK.
 	[5] RSA.
-Your input :: " key
+	
+	Your input :: " key
 		if [[ $key == "0" ]]
 		then
 			echo Returning to menu...
 			break
 		elif [[ $key -gt "5" ]] # if it is an invalid input.
 		then
-			printf "Invalid input. Try again :: "
+			echo Invalid input. Try again
 
 		else # If it is valid, and not zero then proceed.
 			read -rp \
 "Enter number of rounds (leave blank to set the default value) :: " rounds
 			if [[ -z $rounds ]] # Default value is 16
 			then
+				echo Setting rounds to the default value: 16... DONE.
 				rounds=16
 			fi
-			
+			while :
+			do
+				read -rp "
+--------------------------------------------------------------------------------
+
+Where to store?
+
+	[1] Hosts folder
+	[2] Users folder
+
+	Your input :: " folder
+				if [[ $folder == 1 ]]
+				then
+					folder="hosts"
+					break
+				elif [[ $folder == 2 ]]
+				then
+					folder="users"
+					break
+				else
+					echo Invalid input. Try again
+				fi
+			done
 			if [[ $key == "1" ]] # ECDSA Has predefined key bit lengths
 			then
-				gen_ecdsa "$1"
-			elif [[ $key == "2" ||  $key == "3" ||  $key == "4" ]] # They have
-			then 		# static length
-				gen_static
+				gen_ecdsa "$rounds" "$folder" 
+			elif [[ $key == "2" ]]
+			then
+				gen_static "$rounds" "$folder" "ecdsa-sk"
+			elif [[ $key == "3" ]]
+			then
+				gen_static "$rounds" "$folder" "ed25519"
+			elif [[ $key == "4" ]]
+			then
+				gen_static "$rounds" "$folder" "ed25519-sk"
 			else
-				gen_rsa
+				gen_rsa "$rounds" "$folder"
 			fi
 		fi
 	done
+	return 0
 }
 
 manage(){
 	printf \
-"This script must be running in the SSH CA's home directory, i.e., in the sshca/ 
+"
+This script must be running in the SSH CA's home directory, i.e., in the sshca/ 
 directory that was created earlier. If this condition is not satisfied, then you
 must guide the program to find that directory. Is the current directory it? 
-[Y/n]"
+[Y/n] "
 	read -r condition
 	while :
 	do
@@ -310,19 +433,23 @@ must guide the program to find that directory. Is the current directory it?
 			while :
 			do
 				read -r path
-				if [[ ! -d $path ]]
+				if [[ -z $path ]]
 				then
-					printf "Invalid path. Try again :: "
+					echo Exiting...
+					exit $WRONG_PATH
 				elif cd "$path"
 				then
 					echo "Moved to the sshca/ directory"
 					break
 				else
-					echo Exiting...
-					exit $WRONG_PATH
+					printf "Invalid path. Try again :: "
 				fi
 			done
 			break
+		elif [[ -z $condition ]]
+		then
+			echo Exiting...
+			exit $WRONG_PATH
 		elif [[ $condition == "y" || $condition == "Y" ]]
 		then
 			echo Good job.
@@ -331,7 +458,10 @@ must guide the program to find that directory. Is the current directory it?
 			printf "Invalid input. Try again :: "
 		fi
 	done
-	echo "Proceeding..."
+	echo "Proceeding...
+
+--------------------------------------------------------------------------------
+"
 	while :
 	do
 		printf "Choose an option.
@@ -352,17 +482,15 @@ must guide the program to find that directory. Is the current directory it?
 		then
 			echo Invalid input. Try again
 		else
-			if [[ $choice == 2 ]]
+			if [[ $choice == 1 ]]
 			then
 				generate_key "hosts"
-			elif [[ $choice == 3 ]]
-			then
-				generate_key "users"
 			else
-				generate_key
+				echo 
 			fi
 		fi
 	done
+	return 0
 }
 
 # main() {
