@@ -475,7 +475,28 @@ Your input :: " principal
 			exit $SSH_FAILURE
 		fi
 	else
-		if sudo ssh-keygen -s ca/ca_host_key -I "$identifier" -V +90d -n "$principal" "$path" 
+		read -rp "The list bellow shows available extensions. Choose one, or leave 
+it blank to leave default settings (permit everything)
+	o no-port-forwarding
+	o no-port-forwarding
+	o no-tty
+	o no-user-rc
+	o no-x11-forwarding
+	o force-command=\"/path/to/command\"
+
+Give the extensions in a comma separated list, without any spaces, e.g., 
+no-x11-forwarding,no-pty,no-agent-forwarding
+
+Your input :: " extensions
+################################################################################
+#	This does not work because each extension must have it's dependant -O flag #
+################################################################################
+		if sudo ssh-keygen -s ca/ca_host_key -I "$identifier" \
+			-O "$extensions" -V +90d -n "$principal" "$path" #&> /dev/null
+		then
+			echo DONE.
+		elif sudo ssh-keygen -s ca/ca_host_key -I "$identifier" \
+			-V +90d -n "$principal" "$path"
 		then
 			echo DONE.
 		else 
