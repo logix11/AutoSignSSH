@@ -10,7 +10,7 @@ SED_ERROR=6
 
 init(){
 	printf "The script will establish the CA in this location, proceed? [Y/n] :: "
-
+	local choice
 	# This loop is to ensure that the input is valid.
 	while :
 	do
@@ -28,7 +28,7 @@ init(){
 			break
 		fi
 	done
-	printf "Greate! Let's keep going
+	printf "Greate! Let's keep going.
 
 Task: creating directories..."
 	if mkdir -p sshca/{ca,hosts,users}
@@ -114,7 +114,7 @@ default path) :: "
 
 		if [[ -z $sshd_path ]]
 		then
-			sshd_path="/etc/ssh/sshd_config"
+			local sshd_path="/etc/ssh/sshd_config"
 			echo "Using default path..."
 			break
 		elif [[ ! -e "$sshd_path" ]]
@@ -162,7 +162,7 @@ path) :: "
 
 		if [[ -z $ssh_path ]]
 		then
-			ssh_path="/etc/ssh/ssh_known_hosts"
+			local ssh_path="/etc/ssh/ssh_known_hosts"
 			echo "Using default path..."
 			break
 		elif [[ ! -e "$ssh_path" ]]
@@ -194,6 +194,7 @@ one..."
 
 Setting it to trust the CA..."
 
+	local ca_host_key
 	ca_host_key=$(<ca_host_key.pub)
 	read -rp "Enter your CA's domain name (or * for any) :: " dn
 	if echo "@cert-authority ($dn) ($ca_host_key)" >> ../ssh_known_hosts
@@ -212,6 +213,7 @@ the sshd_config and ssh_known_hosts"
 
 gen_ecdsa(){
 	# Ensuring that the input is valid.
+	local bit
 	while :
 	do
 		read -rp "
@@ -289,6 +291,7 @@ Setting access controls..."
 }
 
 gen_rsa(){
+	local bits
 	while :
 	do
 		read -rp "
@@ -299,7 +302,7 @@ Choose a key length:
 	[0] Return to menu.
 	[1] 2048-bits.
 	[2] 3072-bits (recommended).
-	[3] 4096.
+	[3] 4096-bits.
 
 	Your input :: " bits
 		if [[ $bits == 0 ]]
@@ -343,6 +346,7 @@ Setting access controls..."
 }
 
 generate_key(){
+	local key
 	while :
 	do
 		read -rp "
@@ -366,6 +370,7 @@ Which cryptographic key you want to generate?
 			echo Invalid input. Try again
 
 		else # If it is valid, and not zero then proceed.
+			local rounds
 			read -rp \
 "Enter number of rounds (leave blank to set the default value) :: " rounds
 			if [[ -z $rounds ]] # Default value is 16
@@ -373,6 +378,8 @@ Which cryptographic key you want to generate?
 				echo Setting rounds to the default value: 16... DONE.
 				rounds=16
 			fi
+
+			local folder
 			while :
 			do
 				read -rp "
@@ -416,7 +423,71 @@ Where to store?
 	return 0
 }
 
+sign_cert(){
+	local host=$1
+
+	local path
+	tree
+	printf "Enter the path to the private key :: "
+	while :
+	do
+		read -r path
+		if [[ ! -e "$path" ]]
+		then
+			echo "Invalid path. Try again"
+		else
+			echo "Understood"
+			break
+		fi
+	done
+
+	local identifier
+	read -rp "
+--------------------------------------------------------------------------------
+
+Specify the key identifier (it does not have to be unique, but it should be 
+meaningful):: " identifier
+	
+	local principal
+	read -rp "
+--------------------------------------------------------------------------------
+
+Specify the principal(s)
+
+if it's for a server, then enter the FQDN or IP address(s). 
+
+Otherwise, specify the usernames that'll utilize it. 
+
+You can specify more than one in a list, separated by commas, without any spaces
+like so: principal1,principal2,principal3,...,principaln
+
+Your input :: " principal
+
+	echo \
+"Signing on the key. It'll ask for SUDO password, because the of access controls."
+	if $host
+	then
+		if sudo ssh-keygen -s ca/ca_host_key -I "$identifier" -V +90d -n "$principal" -h "$path" 
+		then
+			echo DONE.
+		else 
+			echo ERROR: echo failed to run ssh-keygen, exiting...
+			exit $SSH_FAILURE
+		fi
+	else
+		if sudo ssh-keygen -s ca/ca_host_key -I "$identifier" -V +90d -n "$principal" "$path" 
+		then
+			echo DONE.
+		else 
+			echo ERROR: echo failed to run ssh-keygen, exiting...
+			exit $SSH_FAILURE
+		fi
+	fi
+	return 0
+}
+
 manage(){
+	local condition
 	printf \
 "
 This script must be running in the SSH CA's home directory, i.e., in the sshca/ 
@@ -462,6 +533,7 @@ must guide the program to find that directory. Is the current directory it?
 
 --------------------------------------------------------------------------------
 "
+	local choice
 	while :
 	do
 		printf "Choose an option.
@@ -485,6 +557,13 @@ must guide the program to find that directory. Is the current directory it?
 			if [[ $choice == 1 ]]
 			then
 				generate_key "hosts"
+			elif [[ $choice == 2 ]]
+			then
+				sign_cert false
+			elif [[ $choice == 3 ]]
+			then
+				sign_cert true
+
 			else
 				echo 
 			fi
@@ -513,7 +592,7 @@ Ensure that OpenSSH is installed before running this script.
 
 if ! command -v ssh &> /dev/null
 then
-	echo "No OpenSSH, exiting"
+	echo "No OpenSSH, exiting..."
 	exit $SSH_FAILURE
 fi
 
