@@ -305,7 +305,8 @@ gen_rsa(){
 	done
 	
 	printf "\nGenerating the key, it'll prompt you for an encryption passphrase.\n"
-	if ssh-keygen -a "$1" -f "$2"/id_rsa -b "$bits" -t rsa -Z aes128-gcm@openssh.com
+	if ssh-keygen -a "$1" -f "$2"/id_rsa -b "$bits" -t rsa \
+	-Z aes128-gcm@openssh.com
 	then
 		printf "Key generation: DONE\n"
 		printf "Setting access controls..."
@@ -471,7 +472,92 @@ sign_cert(){
 }
 
 verify(){
+	local cert_path
+	local ca_path
+	printf "\nEnter the CA's public key's path :: "
+	while :
+	do
+		read -r ca_path
+		if [[ -e $ca_path ]]
+		then
+			break
+		else
+			printf "Invalid input. Try again :: "
+		fi 
+	done
+	printf "\nEnter the certificates's path :: "
+	while :
+	do
+		read -r cert_path
+		if [[ -e $cert_path ]]
+		then
+			break
+		else
+			printf "Invalid input. Try again :: "
+		fi 
+	done
 
+	# For this, I'll need to treat the output by leaving one line, that is, the
+	# line that contains the CA's fingerprint. Then, I need to split it two times
+	# in order to extract the fingerprint alone. The first split will be based 
+	# on the character ":", and will give two sections: the fingerprint and the
+	# algorithm's name. The second split will be based on the space between the 
+	# fingerprint and the algorithm's name, and we'll take the first section
+	# --the fingerprint (finally).
+	fingerprint=$(ssh-keygen -L -f "$cert_path" | grep "Signing CA"| cut \
+		-d ':' -f 3 | cut -d ' ' -f 1)
+	ca_hash=$(ssh-keygen -l -f ca/ca_host_key.pub  | cut -d ' ' -f 2 | cut \
+		-d ':' -f 2)
+	printf "Verifying signature..."
+	if [[ $fingerprint != "$ca_hash" ]]
+	then
+		printf "\nWARNING: the signature is invalid."
+		return 1
+	fi
+	printf "Sucess!\nThe signature is valid.\n"
+	
+	# We'll have some splits to do. Firstly, we grep the line of validity period.
+	# Second, we'll split it in a way to leave only the part of end of validiy.
+	# Lastly, we'll have it like "o <date>T<time>", so we'll have  to split it
+	# again to get rid of that o.
+	local date
+	date=$(ssh-keygen -Lf "$ca_path" | grep Valid | cut -d 't' -f 2 | cut \
+		-d ' ' -f 2)
+	
+	# We'll now convert it to epoch seconds
+	s_date=$(date -d "$date" +%s)
+
+	# We'll get the current epoch seconds
+	epoch_seconds=$(date +%s)
+	printf "Verifying validity period..."
+	if [[ $s_date -gt $epoch_seconds ]]
+	then
+		printf "\nWARNING: the certificate is no longer valid."
+		return 1
+	fi
+	echo "DONE."
+
+	# We'll now verify it against the Key Revokation List, the equivalent for
+	# Certificate Revokation List in Transport Layer Security.
+	printf "\nEnter the KRL's path :: "
+	while :
+	do
+		read -r krl_path
+		if [[ -e $krl_path ]]
+		then
+			break
+		else
+			printf "Invalid input. Try again :: "
+		fi 
+	done
+
+	if ! ssh-keygen -Q -f "$krl_path" "$cert_path"
+	then
+		printf "\nWARNING: the certificate is revoked"
+		return 0
+	fi
+	echo DONE.
+	echo The certificate is valid.
 	return 0
 }
 
