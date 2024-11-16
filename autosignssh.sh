@@ -474,27 +474,49 @@ sign_cert(){
 verify(){
 	local cert_path
 	local ca_path
-	printf "\nEnter the CA's public key's path :: "
+	printf "\nChoose a CA public key to utilize :: 
+	
+	[0] Return to menu.
+	[1] Host's key.
+	[2] User's key.
+
+	Your input ::"
 	while :
 	do
 		read -r ca_path
-		if [[ -e $ca_path ]]
+		if [[ $ca_path == 0 ]]
 		then
+			return 0
+		elif [[ $ca_path == 1 ]]
+		then
+			ca_path="ca/ca_host_key.pub"
+			keys="hosts"
+			break
+		elif [[ $ca_path == 2 ]]
+		then
+			ca_path="ca/ca_user_key.pub"
+			keys="users"
 			break
 		else
 			printf "Invalid input. Try again :: "
 		fi 
 	done
-	printf "\nEnter the certificates's path :: "
-	while :
-	do
-		read -r cert_path
-		if [[ -e $cert_path ]]
-		then
-			break
+
+	keys=("$keys"/*.pub) # List the items and store them in the variable
+	printf "Select the key you want to verify.\n"
+	for i in "${!keys[@]}"; do # For i in each item of the list 
+		echo "[$i] ${keys[i]}" # print the item
+	done
+	printf "Your input :: "
+	while : ; do
+		read -r choice 
+		if [[ $choice -gt ${#keys[@]} || $choice -lt 0 ]] # If choice is greater than list length, or smaller than zero then.
+		then 
+			printf "Invalid choice. Try again :: "
 		else
-			printf "Invalid input. Try again :: "
-		fi 
+			key="${keys[choice]}" # Store the path to the key in this variable
+			break
+		fi
 	done
 
 	# For this, I'll need to treat the output by leaving one line, that is, the
@@ -504,10 +526,24 @@ verify(){
 	# algorithm's name. The second split will be based on the space between the 
 	# fingerprint and the algorithm's name, and we'll take the first section
 	# --the fingerprint (finally).
-	fingerprint=$(ssh-keygen -L -f "$cert_path" | grep "Signing CA"| cut \
+	if fingerprint=$(ssh-keygen -L -f "$key" | grep "Signing CA"| cut \
 		-d ':' -f 3 | cut -d ' ' -f 1)
-	ca_hash=$(ssh-keygen -l -f ca/ca_host_key.pub  | cut -d ' ' -f 2 | cut \
+	then
+		echo "Extracting fingerprint from the certificate...DONE"
+	else
+		echo ERROR: could not extract fingerprint from the certificate, exiting...
+		exit $SSH_FAILURE
+	fi
+	
+	if ca_hash=$(ssh-keygen -l -f "$ca_path" | cut -d ' ' -f 2 | cut \
 		-d ':' -f 2)
+	then
+		echo "Extracting fingerprint from the CA certificate...DONE"
+	else
+		echo ERROR: could not extract fingerprint from the CA certificate, exiting...
+		exit $SSH_FAILURE
+	fi
+	
 	printf "Verifying signature..."
 	if [[ $fingerprint != "$ca_hash" ]]
 	then
@@ -521,9 +557,14 @@ verify(){
 	# Lastly, we'll have it like "o <date>T<time>", so we'll have  to split it
 	# again to get rid of that o.
 	local date
-	date=$(ssh-keygen -Lf "$ca_path" | grep Valid | cut -d 't' -f 2 | cut \
+	if date=$(ssh-keygen -lf "$ca_path" | grep Valid | cut -d 't' -f 2 | cut \
 		-d ' ' -f 2)
-	
+	then
+		echo Exctracting the certificate\'s validity date...
+	else
+		echo ERROR: could not extract the certificate\'s validity date, exiting...
+		exit $SSH_FAILURE
+	fi
 	# We'll now convert it to epoch seconds
 	s_date=$(date -d "$date" +%s)
 
@@ -551,9 +592,9 @@ verify(){
 		fi 
 	done
 
-	if ! ssh-keygen -Q -f "$krl_path" "$cert_path"
+	if ! ssh-keygen -Q -f "$krl_path" "$key"
 	then
-		printf "\nWARNING: the certificate is revoked"
+		echo "WARNING: SSH has failed or the certificate is revoked"
 		return 0
 	fi
 	echo DONE.
@@ -630,7 +671,10 @@ manage(){
 			elif [[ $choice == 3 ]]
 			then
 				sign_cert true
-
+			elif [[ $choice == 4 ]]
+			then
+				verify
+			
 			else
 				echo 
 			fi
