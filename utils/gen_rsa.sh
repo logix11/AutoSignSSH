@@ -5,13 +5,14 @@ gen_rsa(){
 	while :
 	do
 		printf "\n--------------------------------------------------------------------------------\n"
+	
 		echo "Choose a key length:"
 		echo "	[0] Return to menu."
 		echo "	[1] 2048-bits."
 		echo "	[2] 3072-bits (recommended)."
 		echo "	[3] 4096-bits."
 
-		read -rp "	Your input :: " bits
+		read -rp "\n	Your input :: " bits
 		if [[ $bits == 0 ]]
 		then
 			return 0
@@ -32,22 +33,26 @@ gen_rsa(){
 		fi
 	done
 	
-	printf "\nGenerating the key, it'll prompt you for an encryption passphrase.\n"
-	if ssh-keygen -a "$1" -f "$2"/id_rsa -b "$bits" -t rsa \
-	-Z aes128-gcm@openssh.com
+	printf "\n--------------------------------------------------------------------------------\n"
+	
+	echo "Generating the key, it'll prompt you for an encryption passphrase."
+	if ssh-keygen -a "$1" -f "$2"/id_rsa -b "$bits" -t rsa -Z aes128-gcm@openssh.com
 	then
-		printf "Key generation: DONE\n"
+		echo "Key generation: DONE."
 		printf "Setting access controls..."
+
+		printf "\n--------------------------------------------------------------------------------\n"
+	
 		if chmod 600 "$2"/id_rsa
 		then
 			echo DONE.
 		else
 			echo ERROR: setting access controls failed, exiting...
-			exit $PERMS_ERROR
+			exit "$PERMS_ERROR"
 		fi 
 	else
 		echo ERROR: echo failed to run ssh-keygen, exiting...
-		exit $SSH_FAILURE
+		exit "$SSH_FAILURE"
 	fi
 	return 0
 }

@@ -26,6 +26,9 @@ revoke(){
 			printf "Invalid input. Try again :: "
 		fi 
 	done
+		
+	printf "\n--------------------------------------------------------------------------------\n"
+
 	keys=("$keys"/*.pub) # List the items and store them in the variable
 	printf "Select the key you want to verify.\n"
 	for i in "${!keys[@]}"; do # For i in each item of the list 
@@ -44,7 +47,10 @@ revoke(){
 			break
 		fi
 	done
-	
+		
+	printf "\n--------------------------------------------------------------------------------\n"
+
+	# Test the command, if it does not work, exit with error message.
 	if ssh-keygen -k -u -f krl.krl "$key"
 	then
 		echo Revoking key...DONE

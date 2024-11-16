@@ -5,6 +5,7 @@ generate_key(){
 	while :
 	do
 		printf "\n--------------------------------------------------------------------------------\n"
+		
 		echo "Which cryptographic key you want to generate?"
 		echo "	[0] Return to menu."
 		echo "	[1] ECDSA."
@@ -14,11 +15,11 @@ generate_key(){
 		echo "	[5] RSA."
 	
 		read -rp "	Your input :: " key
-		if [[ $key == "0" ]]
+		if [[ $key == 0 ]]
 		then
 			echo Returning to menu...
 			break
-		elif [[ $key -gt "5" ]] # if it is an invalid input.
+		elif [[ $key -gt 5 || $key -lt 6 ]] # if it is an invalid input.
 		then
 			echo Invalid input. Try again
 
@@ -35,12 +36,17 @@ generate_key(){
 			while :
 			do
 				printf "\n--------------------------------------------------------------------------------\n"
+				
 				echo "Where to store?"
-				echo "	[1] Hosts folder"
-				echo "	[2] Users folder"
+				echo "	[0] Return to menu."
+				echo "	[1] Hosts folder."
+				echo "	[2] Users folder."
 
-				read -rp "	Your input :: " folder
-				if [[ $folder == 1 ]]
+				read -rp "\n	Your input :: " folder
+				if [[ $folder == 0 ]]
+				then
+					return 0
+				elif [[ $folder == 1 ]]
 				then
 					folder="hosts"
 					break
@@ -52,16 +58,16 @@ generate_key(){
 					echo Invalid input. Try again
 				fi
 			done
-			if [[ $key == "1" ]] # ECDSA Has predefined key bit lengths
+			if [[ $key == 1 ]] # ECDSA Has predefined key bit lengths
 			then
 				gen_ecdsa "$rounds" "$folder" 
-			elif [[ $key == "2" ]]
+			elif [[ $key == 2 ]]
 			then
 				gen_static "$rounds" "$folder" "ecdsa-sk"
-			elif [[ $key == "3" ]]
+			elif [[ $key == 3 ]]
 			then
 				gen_static "$rounds" "$folder" "ed25519"
-			elif [[ $key == "4" ]]
+			elif [[ $key == 4 ]]
 			then
 				gen_static "$rounds" "$folder" "ed25519-sk"
 			else

@@ -3,6 +3,9 @@
 verify(){
 	local keys
 	local ca_path
+
+	# Giving the user the choice between selecting the key that is designated
+	# to the hosts or to the users
 	printf "\nChoose a CA public key to utilize :: 
 	
 	[0] Return to menu.
@@ -30,8 +33,11 @@ verify(){
 			printf "Invalid input. Try again :: "
 		fi 
 	done
-	keys=("$keys"/*.pub) # List the items and store them in the variable
-	printf "Select the key you want to verify.\n"
+
+	# Giving the user a list of host or user keys to select from it.
+	# First, list the items and store them in the variable
+	keys=("$keys"/*.pub) 
+	echo "Select the key you want to verify."
 	for i in "${!keys[@]}"; do # For i in each item of the list 
 		echo "	[$i] ${keys[i]}" # print the item
 	done
@@ -50,24 +56,31 @@ verify(){
 	done
 
 	# For this, I'll need to treat the output by leaving one line, that is, the
-	# line that contains the CA's fingerprint. Then, I need to split it two times
-	# in order to extract the fingerprint alone. The first split will be based 
-	# on the character ":", and will give two sections: the fingerprint and the
-	# algorithm's name. The second split will be based on the space between the 
-	# fingerprint and the algorithm's name, and we'll take the first section
-	# --the fingerprint (finally).
-	if fingerprint=$(ssh-keygen -L -f "$key" | grep "Signing CA"| cut \
-		-d ':' -f 3 | cut -d ' ' -f 1)
+	# line that contains the CA's fingerprint. 
+
+	# Then, I need to split it two times in order to extract the fingerprint 
+	# alone. The first split will be based on the character ":", and will give 
+	# two sections: the fingerprint and the algorithm's name. 
+	
+	# The second split will be based on the space between the fingerprint and 
+	# the algorithm's name, and we'll take the first section --the fingerprint 
+	# (finally).
+
+	# Test if the ssh command works.
+	if ssh-keygen -L -f "$key"
 	then
+		fingerprint=$(ssh-keygen -L -f "$key" | grep "Signing CA"| cut \
+		-d ':' -f 3 | cut -d ' ' -f 1)
 		echo "Extracting fingerprint from the certificate...DONE"
 	else
 		echo ERROR: could not extract fingerprint from the certificate, exiting...
 		exit $SSH_FAILURE
 	fi
 	
-	if ca_hash=$(ssh-keygen -l -f "$ca_path" | cut -d ' ' -f 2 | cut \
-		-d ':' -f 2)
+	if ssh-keygen -l -f "$ca_path"
 	then
+		ca_hash=$(ssh-keygen -l -f "$ca_path" | cut -d ' ' -f 2 | cut \
+		-d ':' -f 2)
 		echo "Extracting fingerprint from the CA certificate...DONE"
 	else
 		echo ERROR: could not extract fingerprint from the CA certificate, exiting...
@@ -87,9 +100,10 @@ verify(){
 	# Lastly, we'll have it like "o <date>T<time>", so we'll have  to split it
 	# again to get rid of that o.
 	local date
-	if date=$(ssh-keygen -lf "$ca_path" | grep Valid | cut -d 't' -f 2 | cut \
-		-d ' ' -f 2)
+	if ssh-keygen -lf "$ca_path"
 	then
+		date=$(ssh-keygen -lf "$ca_path" | grep Valid | cut -d 't' -f 2 | cut \
+		-d ' ' -f 2)
 		echo Exctracting the certificate\'s validity date...
 	else
 		echo ERROR: could not extract the certificate\'s validity date, exiting...

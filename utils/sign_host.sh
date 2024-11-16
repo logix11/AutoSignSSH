@@ -1,6 +1,7 @@
 #!/bin/bash
 
 sign_host(){
+	# This function is very similar to sign_user.sh, check it for explanation
 	local keys
 	keys=(hosts/*.pub) # List the items and store them in the variable
 	printf "Select the key you want to sign on.\n"
@@ -22,15 +23,20 @@ sign_host(){
 		fi
 	done
 
-	local identifier
 	printf "\n--------------------------------------------------------------------------------\n"
+
+	local identifier
 	read -rp "Specify the key identifier (it does not have to be unique, but it should be meaningful):: " identifier
 	
-	local principal
 	printf "\n--------------------------------------------------------------------------------\n"
+
+	local principal
 	echo "Specify the principal(s), it can be the FQDN or IP address(s)."
 	echo "You can specify more than one in a list, separated by commas, without any spaces like so: principal1,principal2,principal3,...,principaln"
 	read -rp "	Your input :: " principal
+	
+	printf "\n--------------------------------------------------------------------------------\n"
+
 	echo "Signing on the key. It'll ask for SUDO password, because the of access controls."
 	if sudo ssh-keygen -s ca/ca_host_key -I "$identifier" -V +90d -n "$principal" -h "$key" 
 	then

@@ -26,6 +26,9 @@ print(){
 			printf "Invalid input. Try again :: "
 		fi 
 	done
+	
+	printf "\n--------------------------------------------------------------------------------\n"
+
 	keys=("$keys"/*.pub) # List the items and store them in the variable
 	printf "Select the key you want to verify.\n"
 	for i in "${!keys[@]}"; do # For i in each item of the list 
@@ -44,8 +47,10 @@ print(){
 			break
 		fi
 	done
+	
+	printf "\n--------------------------------------------------------------------------------\n"
 
-	if ssh-keygen -Lf $key
+	if ssh-keygen -Lf "$key"
 	then
 		echo Certificate printed successfully.
 	else
