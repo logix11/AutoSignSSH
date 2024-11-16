@@ -28,9 +28,9 @@ init(){
 			break
 		fi
 	done
-	printf "Greate! Let's keep going.
+	echo "Greate! Let's keep going."
 
-Task: creating directories..."
+		printf "Creating directories..."
 	if mkdir -p sshca/{ca,hosts,users}
 	then
 		echo "DONE."
@@ -38,27 +38,23 @@ Task: creating directories..."
 		echo "ERROR: Could not create directories, exitting..."  
 		exit $FAILED_DIR_INIT
 	fi
-	echo "The created directories are:
-ca/		Contains the CA's public and private keys.
-hosts/	Contains the hosts' certificates.
-users/	Contains the users' certificates.
-
---------------------------------------------------------------------------------
-	"
+	echo "The created directories are:"
+	echo "	ca/		Contains the CA's public and private keys."
+	echo "	hosts/	Contains the hosts' certificates."
+	echo "	users/	Contains the users' certificates."
+	printf "\n--------------------------------------------------------------------------------\n"
 
 	if cd sshca/ca
 	then 
-		echo "Navigating to the direcotry...DONE"
+		echo "Navigating to the direcotry...DONE."
 	else
 		echo "ERROR: Could not navigate to the created directories, exiting ..." 
 		exit $FAILED_CD
 	fi
 
-	echo "Generating a new private key for the hosts, this will prompt you for 
-an encryption passphrase. 
+	echo "Generating a new private key for the hosts, this will prompt you for an encryption passphrase."
 
-Remember the passphrase, or use a password manager.
-	"
+	echo "Remember the passphrase, or use a password manager."
 
 	if ssh-keygen -a 16 -b 256 -f ca_host_key -t ecdsa -Z aes128-gcm@openssh.com
 	then 
@@ -68,8 +64,7 @@ Remember the passphrase, or use a password manager.
 		exit $SSH_FAILURE
 	fi
 
-	echo "
-Setting access controls... This reuires the root password."
+	printf "\nSetting access controls... This reuires the root password."
 
 	if sudo chown root:root ca_host_key* && sudo chmod 600 ca_host_key
 	then 
@@ -79,10 +74,9 @@ Setting access controls... This reuires the root password."
 		exit $PERMS_ERROR
 	fi
 
-	echo "
---------------------------------------------------------------------------------
+	printf "\n--------------------------------------------------------------------------------\n"
 
-Generating a new private key for the users."
+	echo "Generating a new private key for the users."
 
 	if ssh-keygen -a 16 -b 256 -f ca_user_key -t ecdsa -Z aes128-gcm@openssh.com
 	then
@@ -91,8 +85,7 @@ Generating a new private key for the users."
 		echo "ERROR: Could not generate CA's user signing keys, exiting..."
 		exit $SSH_FAILURE
 	fi
-	printf "
-Setting access controls..."
+	printf "\nSetting access controls..."
 
 	if sudo chown root:root ca_user_key* && sudo chmod 600 ca_user_key
 	then
@@ -101,12 +94,11 @@ Setting access controls..."
 		echo "ERROR: Could not set access controls, exiting..."
 		exit $PERMS_ERROR
 	fi	
-	printf "
---------------------------------------------------------------------------------
+	printf "\n--------------------------------------------------------------------------------\n"
 	
-Configuring the OpenSSH server...
-Enter the path to sshd_config configuration file (or leave it blank to use the 
-default path) :: " 
+	printf "Configuring the OpenSSH server...\n"
+	printf "Enter the path to sshd_config configuration file (or leave it blank to use the default path) :: "
+
 	# This loop is to ensure that the input is valid
 	while :
 	do
@@ -137,23 +129,21 @@ default path) :: "
 	fi
 
 	printf "Setting it to trust the CA..."
-	sed -i "1s/^/TrustedUserCAKeys\n/" ../sshd_config # Prepend 
-		# TrustedUserCAKeys to the beginning of the first line of that file, 
-		# and theeeeeeeeeeeeeeeeeeeeeeeeeeeeeen replace it.
+	sed -i "1s/^/TrustedUserCAKeys\n/" ../sshd_config # Prepend TrustedUserCAKeys
+		# to the beginning of the first line of that file, and theeeeeeeeeeeeeen
+		# replace it.
 		# I could not reduce the complexity, sorry.
 	if sed -i "/TrustedUserCAKeys/c\\TrustedUserCAKeys $(pwd)/ca_user_key" ../sshd_config
 	then
-		echo "DONE.
-Now put this file back to production directory."
+		printf "DONE.\n"
+		printf "Now put this file back to production directory."
 	else
 		echo "ERROR: could not edit on sshd_config, exiting..." 
 		exit $SED_ERROR
 	fi
 
-	printf "
-Configuring the OpenSSH client...
-Enter the path to ssh_known_hosts file (or leave it blank to use the default 
-path) :: "
+	printf "\nConfiguring the OpenSSH client...\n"
+	printf "Enter the path to ssh_known_hosts file (or leave it blank to use the default path) :: "
 
 	# This loop is to ensure that the input is a valid one.
 	while :
@@ -167,7 +157,7 @@ path) :: "
 			break
 		elif [[ ! -e "$ssh_path" ]]
 		then
-			echo "Invalid path. Try again"
+			printf "Invalid path. Try again :: "
 		else
 			echo "Understood"
 			break
@@ -178,8 +168,7 @@ path) :: "
 	then
 		echo "DONE"
 	else
-		printf "ERROR: could not copy sshd_config, attempting to create a local 
-one..."
+		printf "ERROR: could not copy sshd_config, attempting to create a local one..."
 		if touch ../ssh_known_hosts
 		then
 			echo DONE
@@ -189,10 +178,8 @@ one..."
 		fi
 	fi
 
-	printf "
---------------------------------------------------------------------------------
-
-Setting it to trust the CA..."
+	printf "\n--------------------------------------------------------------------------------"
+	printf "Setting it to trust the CA..."
 
 	local ca_host_key
 	ca_host_key=$(<ca_host_key.pub)
@@ -205,9 +192,7 @@ Setting it to trust the CA..."
 		exit $SED_ERROR
 	fi
 
-	echo "The setup has finished successfully, you can start signing and issuing
-certificates after the host and users receive their configuration files, i.e.,
-the sshd_config and ssh_known_hosts"
+	echo "The setup has finished successfully, you can start signing and issuing certificates after the host and users receive their configuration files, i.e., the sshd_config and ssh_known_hosts"
 	return 0
 }
 
@@ -216,16 +201,15 @@ gen_ecdsa(){
 	local bit
 	while :
 	do
-		read -rp "
---------------------------------------------------------------------------------
+		printf "\n--------------------------------------------------------------------------------\n"
 
-Enter key's bit-length:
-	[0] Return to menu.
-	[1] 256-bit long.
-	[2] 384-bit long.
-	[3] 521-bit long.
+		echo "Enter key's bit-length:"
+		echo "	[0] Return to menu."
+		echo "	[1] 256-bit long."
+		echo "	[2] 384-bit long."
+		echo "	[3] 521-bit long."
 
-	Your input :: " bit
+		read -rp "Your input :: " bit
 		if [[ $bit == "0" ]]
 		then
 			echo Returning to menu...
@@ -248,8 +232,8 @@ Enter key's bit-length:
 			if ssh-keygen -a "$1" -b "$bit" -f "$2"/id_ecdsa -t ecdsa \
 			-Z aes128-gcm@openssh.com
 			then
-				printf "Key generation: DONE
-Setting access controls..."
+				echo "Key generation: DONE."
+				printf "Setting access controls..."
 				if chmod 600 "$2"/id_ecdsa
 				then
 					echo DONE.
@@ -268,14 +252,12 @@ Setting access controls..."
 }
 
 gen_static() {
-	echo "
---------------------------------------------------------------------------------	
-
-Generating the key, it'll prompt you for an encryption passphrase."
+	printf "\n--------------------------------------------------------------------------------\n"
+	echo "Generating the key, it'll prompt you for an encryption passphrase."
 	if ssh-keygen -a "$1" -f "$2"/"$3" -t "$3" -Z aes128-gcm@openssh.com
 	then
-		printf "Key generation: DONE
-Setting access controls..."
+		printf "Key generation: DONE\n"
+		printf "Setting access controls..."
 		if chmod 600 "$2"/"$3"
 		then
 			echo DONE.
@@ -294,17 +276,14 @@ gen_rsa(){
 	local bits
 	while :
 	do
-		read -rp "
-	--------------------------------------------------------------------------------
+		printf "\n--------------------------------------------------------------------------------\n"
+		echo "Choose a key length:"
+		echo "	[0] Return to menu."
+		echo "	[1] 2048-bits."
+		echo "	[2] 3072-bits (recommended)."
+		echo "	[3] 4096-bits."
 
-Choose a key length:
-	
-	[0] Return to menu.
-	[1] 2048-bits.
-	[2] 3072-bits (recommended).
-	[3] 4096-bits.
-
-	Your input :: " bits
+		read -rp "	Your input :: " bits
 		if [[ $bits == 0 ]]
 		then
 			return 0
@@ -325,12 +304,11 @@ Choose a key length:
 		fi
 	done
 	
-	echo "
-	Generating the key, it'll prompt you for an encryption passphrase."
+	printf "\nGenerating the key, it'll prompt you for an encryption passphrase.\n"
 	if ssh-keygen -a "$1" -f "$2"/id_rsa -b "$bits" -t rsa -Z aes128-gcm@openssh.com
 	then
-		printf "Key generation: DONE
-Setting access controls..."
+		printf "Key generation: DONE\n"
+		printf "Setting access controls..."
 		if chmod 600 "$2"/id_rsa
 		then
 			echo DONE.
@@ -349,18 +327,16 @@ generate_key(){
 	local key
 	while :
 	do
-		read -rp "
---------------------------------------------------------------------------------
-
-Which cryptographic key you want to generate?
-	[0] Return to menu.
-	[1] ECDSA.
-	[2] ECDSA-SK.
-	[3] ED25519.
-	[4] ED25519-SK.
-	[5] RSA.
+		printf "\n--------------------------------------------------------------------------------\n"
+		echo "Which cryptographic key you want to generate?"
+		echo "	[0] Return to menu."
+		echo "	[1] ECDSA."
+		echo "	[2] ECDSA-SK."
+		echo "	[3] ED25519."
+		echo "	[4] ED25519-SK."
+		echo "	[5] RSA."
 	
-	Your input :: " key
+		read -rp "	Your input :: " key
 		if [[ $key == "0" ]]
 		then
 			echo Returning to menu...
@@ -371,8 +347,7 @@ Which cryptographic key you want to generate?
 
 		else # If it is valid, and not zero then proceed.
 			local rounds
-			read -rp \
-"Enter number of rounds (leave blank to set the default value) :: " rounds
+			read -rp "Enter number of rounds (leave blank to set the default value) :: " rounds
 			if [[ -z $rounds ]] # Default value is 16
 			then
 				echo Setting rounds to the default value: 16... DONE.
@@ -382,15 +357,12 @@ Which cryptographic key you want to generate?
 			local folder
 			while :
 			do
-				read -rp "
---------------------------------------------------------------------------------
+				printf "\n--------------------------------------------------------------------------------\n"
+				printf "Where to store?"
+				printf "	[1] Hosts folder"
+				printf "	[2] Users folder"
 
-Where to store?
-
-	[1] Hosts folder
-	[2] Users folder
-
-	Your input :: " folder
+				read -rp "	Your input :: " folder
 				if [[ $folder == 1 ]]
 				then
 					folder="hosts"
@@ -442,29 +414,17 @@ sign_cert(){
 	done
 
 	local identifier
-	read -rp "
---------------------------------------------------------------------------------
-
-Specify the key identifier (it does not have to be unique, but it should be 
-meaningful):: " identifier
+	printf "\n--------------------------------------------------------------------------------\n"
+	reaed -rp "Specify the key identifier (it does not have to be unique, but it should be meaningful):: " identifier
 	
 	local principal
-	read -rp "
---------------------------------------------------------------------------------
-
-Specify the principal(s)
-
-if it's for a server, then enter the FQDN or IP address(s). 
-
-Otherwise, specify the usernames that'll utilize it. 
-
-You can specify more than one in a list, separated by commas, without any spaces
-like so: principal1,principal2,principal3,...,principaln
-
-Your input :: " principal
-
-	echo \
-"Signing on the key. It'll ask for SUDO password, because the of access controls."
+	printf "\n--------------------------------------------------------------------------------\n"
+	echo "Specify the principal(s)"
+	echo "If it's for a server, then enter the FQDN or IP address(s)."
+	echo "Otherwise, specify the usernames that'll utilize it."
+	echo "You can specify more than one in a list, separated by commas, without any spaces like so: principal1,principal2,principal3,...,principaln"
+	read -rp "Your input :: " principal
+	echo "Signing on the key. It'll ask for SUDO password, because the of access controls."
 	if $host
 	then
 		if sudo ssh-keygen -s ca/ca_host_key -I "$identifier" -V +90d -n "$principal" -h "$path" 
@@ -475,28 +435,31 @@ Your input :: " principal
 			exit $SSH_FAILURE
 		fi
 	else
-		read -rp "The list bellow shows available extensions. Choose one, or leave 
-it blank to leave default settings (permit everything)
-	o no-port-forwarding
-	o no-port-forwarding
-	o no-tty
-	o no-user-rc
-	o no-x11-forwarding
-	o force-command=\"/path/to/command\"
+		command=$(sudo ssh-keygen -s ca/ca_user_key -I "$identifier" -V +90d \
+			-n "$principal")
+		local extension
+		echo "The list bellow shows available extensions. You can choose as many as you want. If you leave it blank, we'll proceed then. The default is to permit everything and not force any command."
+		echo "	o no-port-forwarding."
+		echo "	o no-port-forwarding."
+		echo "	o no-tty."
+		echo "	o no-user-rc."
+		echo "	o no-x11-forwarding."
+		echo "	o force-command=\"/path/to/command\"."
 
-Give the extensions in a comma separated list, without any spaces, e.g., 
-no-x11-forwarding,no-pty,no-agent-forwarding
-
-Your input :: " extensions
-################################################################################
-#	This does not work because each extension must have it's dependant -O flag #
-################################################################################
-		if sudo ssh-keygen -s ca/ca_host_key -I "$identifier" \
-			-O "$extensions" -V +90d -n "$principal" "$path" #&> /dev/null
-		then
-			echo DONE.
-		elif sudo ssh-keygen -s ca/ca_host_key -I "$identifier" \
-			-V +90d -n "$principal" "$path"
+		while :
+		do
+			read -rp "	Choose one :: " extension
+			if [[ -z "$extension" ]]
+			then
+				# time to break out and proceed.
+				break
+			else
+				command+=" -O $extension"
+				echo "You can enter more, or press enter to proceed."
+			fi
+		done
+		command+=" $path"
+		if $command #&> /dev/null
 		then
 			echo DONE.
 		else 
@@ -507,21 +470,20 @@ Your input :: " extensions
 	return 0
 }
 
+verify(){
+
+	return 0
+}
+
 manage(){
 	local condition
-	printf \
-"
-This script must be running in the SSH CA's home directory, i.e., in the sshca/ 
-directory that was created earlier. If this condition is not satisfied, then you
-must guide the program to find that directory. Is the current directory it? 
-[Y/n] "
-	read -r condition
+	printf "\nThis script must be running in the SSH CA's home directory, i.e., in the sshca/ directory that was created earlier. If this condition is not satisfied, then you must guide the program to find that directory. Is the current directory it? [Y/n] "
 	while :
 	do
+		read -r condition
 		if [[ $condition == "n" || $condition == "N" ]]
 		then
-			printf \
-"Enter the path to the directory (or leave blank to exit) :: "
+			printf "Enter the path to the directory (or leave blank to exit) :: "
 			while :
 			do
 				read -r path
@@ -550,24 +512,22 @@ must guide the program to find that directory. Is the current directory it?
 			printf "Invalid input. Try again :: "
 		fi
 	done
-	echo "Proceeding...
+	echo "Proceeding..."
+	echo "--------------------------------------------------------------------------------"
 
---------------------------------------------------------------------------------
-"
 	local choice
 	while :
 	do
-		printf "Choose an option.
-	[0] Exit.
-	[1] Generate a private key.
-	[2] Sign on a user's key.
-	[3] Sign on a host's key.
-	[4] Verify a certificate.
-	[5] Revoke a certificate.
-	[6] Print out a certificate.
+		echo "Choose an option."
+		echo "	[0] Exit."
+		echo "	[1] Generate a private key."
+		echo "	[2] Sign on a user's key."
+		echo "	[3] Sign on a host's key."
+		echo "	[4] Verify a certificate."
+		echo "	[5] Revoke a certificate."
+		echo "	[6] Print out a certificate."
 	
-	Your input :: "
-		read -r choice
+		read -rp "	Your input :: " choice
 		if [[ $choice == "0" ]]
 		then
 			exit 0
@@ -605,8 +565,7 @@ echo "
 
 -------------------------------Hello and welcome!-------------------------------
 
-This program will help you establish a local Secure Shell (SSH) Certificate 
-Authority (CA) and manage it.
+This program will help you establish a local Secure Shell (SSH) Certificate Authority (CA) and manage it.
 
 Ensure that OpenSSH is installed before running this script.
 "
@@ -621,10 +580,8 @@ echo "It is indeed installed."
 
 while :
 do
-	printf "
---------------------------------------------------------------------------------
-
-Select an option.
+	printf "--------------------------------------------------------------------------------"
+	printf " Select an option.
 	[0] Exit.
 	[1] Establish a CA.
 	[2] Manage a CA
