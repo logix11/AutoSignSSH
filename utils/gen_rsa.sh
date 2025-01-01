@@ -33,16 +33,16 @@ gen_rsa(){
 	echo -e "${INFO}	Generating the key, it'll prompt you for an encryption passphrase."
 	if ssh-keygen -a "$1" -f "$2"/id_rsa -b "$bits" -t rsa -Z aes128-gcm@openssh.com
 	then
-		echo -e "${INFO}	Key generation: DONE."
-		echo -e "${INFO}	Setting access controls..."
-
-		printf "\n--------------------------------------------------------------------------------\n\n"
-	
-		if chmod 600 "$2"/id_rsa ; then
-			echo DONE.
-		else
-			echo -e "${ERROR}	ERROR: setting access controls failed."
-		fi 
+		echo -e "${SUCCESS}	Key generation: DONE."
+		if [[ $2 == "hosts" ]] ; then 
+			echo -e "${INFO}	Referencing host key in sshd_config"
+			if sed -i "/# Host keys/a HostKey    $(pwd)/host/id_rsa" sshd_config
+			then 
+				echo -e "${SUCCESS} Key is now references"
+			else
+				echo -e "${ERROR} Operation failed. Please, reference it yourself"
+			fi	
+		fi	
 	else
 		echo -e "${ERROR}	failed to run ssh-keygen."
 	fi

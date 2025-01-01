@@ -42,6 +42,15 @@ sign_host(){
 	if ssh-keygen -s ca/ca_host_key -I "$identifier" -V +90d -n "$principal" -h "$key" 
 	then
 		echo -e "${SUCCESS}	DONE."
+		echo -e "${INFO} Referencing the certificate in sshd_config file."
+
+		key="${key%.pub}"
+		if sed -i "/# Host keys/a HostCertificate $(pwd)/$key-cert.pub" sshd_config
+		then 
+			echo -e "${SUCCESS} Certificate is now references"
+		else 
+			echo -e "${ERROR} Operation failed. Please, reference it yourself"
+		fi		
 	else 
 		echo -e "${SUCCESS}	Failed to run ssh-keygen, returning..."
 		return $SSH_SIGERR

@@ -34,16 +34,18 @@ gen_ecdsa(){
 
 			if ssh-keygen -a "$1" -b "$bit" -f "$2"/id_ecdsa -t ecdsa \
 				-Z aes128-gcm@openssh.com ; then
-				echo -e "${INFO}	Key generation: DONE."
+				echo -e "${SUCCESS}	Key generation: DONE."
 
-				printf "\n--------------------------------------------------------------------------------\n\n"
-	
-				echo -e "${INFO}	Setting access controls..."
-				if chmod 600 "$2"/id_ecdsa ; then
-					echo -e "${INFO}	DONE."
-				else
-					echo -e "${ERROR}	Setting access controls failed"
+				if [[ $2 == "hosts" ]] ; then 
+					echo -e "${INFO}	Referencing host key in sshd_config"
+					if sed -i "/# Host keys/a HostKey    $(pwd)/host/id_ecdsa" sshd_config
+					then 
+						echo -e "${SUCCESS} Key is now references"
+					else 
+						echo -e "${ERROR} Operation failed. Please, reference it yourself"
+					fi	
 				fi
+				
 			else
 				echo -e "${ERROR}	failed to run ssh-keygen."
 			fi

@@ -153,6 +153,7 @@ ListenAddress	::
 
 # Host keys
 
+# Host certificates
 
 # Ciphers and keying
 #RekeyLimit default none
