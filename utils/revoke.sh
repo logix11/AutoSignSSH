@@ -1,46 +1,42 @@
 #!/bin/bash
-revoke(){
-	printf "\nDoes the key belnong to the host or user :: 
-	
-	[0] Return to menu.
-	[1] Host's key.
-	[2] User's key.
+SSH_REVERR=10
 
-	Your input ::"
+revoke(){
+	echo "		Does the key belnong to the host or user?"
+	echo
+	echo "			[0] Return to menu."
+	echo "			[1] Host's key."
+	echo "			[2] User's key."
+
 	local keys
 	while :
 	do
-		read -r keys
-		if [[ $keys == 0 ]]
-		then
+		read -rp "			Your input :: " keys
+		if [[ $keys == 0 ]] ; then
 			return 0
-		elif [[ $keys == 1 ]]
-		then
+		elif [[ $keys == 1 ]] ; then
 			keys="hosts"
 			break
-		elif [[ $keys == 2 ]]
-		then
+		elif [[ $keys == 2 ]] ; then
 			keys="users"
 			break
 		else
-			printf "Invalid input. Try again :: "
+			echo -e "${WARNING}	Invalid input. Try again."
 		fi 
 	done
 		
-	printf "\n--------------------------------------------------------------------------------\n"
+	printf "\n--------------------------------------------------------------------------------\n\n"
 
 	keys=("$keys"/*.pub) # List the items and store them in the variable
-	printf "Select the key you want to verify.\n"
+	echo "		Select the key you want to verify."
 	for i in "${!keys[@]}"; do # For i in each item of the list 
-		echo "	[$i] ${keys[i]}" # print the item
+		echo "			[$i] ${keys[i]}" # print the item
 	done
-	printf "	Your input :: "
 	local key
 	local choice
 	while : ; do
-		read -r choice 
-		if [[ $choice -gt ${#keys[@]} || $choice -lt 0 ]] # If choice is greater than list length, or smaller than zero then.
-		then 
+		read -rp "		Your input :: " choice 
+		if [[ $choice -gt ${#keys[@]} || $choice -lt 0 ]] ; then # If choice is greater than list length, or smaller than zero then.
 			printf "Invalid choice. Try again :: "
 		else
 			key="${keys[choice]}" # Store the path to the key in this variable
@@ -48,16 +44,15 @@ revoke(){
 		fi
 	done
 		
-	printf "\n--------------------------------------------------------------------------------\n"
+	printf "\n--------------------------------------------------------------------------------\n\n"
 
+	echo -e "${INFO}	Revoking key..."
 	# Test the command, if it does not work, exit with error message.
-	if ssh-keygen -k -u -f krl.krl "$key"
-	then
-		echo Revoking key...DONE
+	if ssh-keygen -k -u -f krl.krl "$key" ; then
+		echo -e "${SUCCESS}	DONE"
 	else
-		echo ERROR: could not revoke key, exiting...
-		exit $SSH_FAILURE
+		echo -e "${ERROR}	Could not revoke key, returning..."
+		return $SSH_REVERR
 	fi
 	return 0
 }
-

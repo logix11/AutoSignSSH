@@ -1,23 +1,19 @@
 #!/bin/bash
 
 gen_static() {
-	printf "\n--------------------------------------------------------------------------------\n"
+	printf "\n--------------------------------------------------------------------------------\n\n"
 
-	echo "Generating the key, it'll prompt you for an encryption passphrase."
-	if ssh-keygen -a "$1" -f "$2"/"$3" -t "$3" -Z aes128-gcm@openssh.com
-	then
-		echo "Key generation: DONE."
-		printf "Setting access controls..."
-		if chmod 600 "$2"/"$3"
-		then
-			echo DONE.
+	echo -e "${INFO}	Generating the key, it'll prompt you for an encryption passphrase."
+	if ssh-keygen -a "$1" -f "$2"/"$3" -t "$3" -Z aes128-gcm@openssh.com ; then
+		echo -e "${INFO}	Key generation: DONE."
+		echo -e "${INFO}	Setting access controls..."
+		if chmod 600 "$2"/"$3" ; then
+			echo -e "${INFO}	DONE."
 		else
-			echo ERROR: setting access controls failed, exiting...
-			exit "$PERMS_ERROR"
+			echo -e "${ERROR}	Setting access controls failed"
 		fi
 	else
-		echo ERROR: failed to run ssh-keygen, exiting...
-		exit "$SSH_FAILURE"
+		echo -e "${INFO}	Failed to run ssh-keygen."
 	fi
 	return 0
 }

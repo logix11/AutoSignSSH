@@ -3,7 +3,7 @@
 # Exit codes
 SSH_ERROR=1
 PATH_ERROR=2
-DIRECTORY_ERROR=3
+ENVERR=3
 PERMS_ERROR=4
 CD_ERROR=5
 SED_ERROR=6
@@ -27,7 +27,7 @@ establish(){
 	local choice
 	# This loop is to ensure that the user either enters 'Y', 'y', 'N' or 'n'.
 	while : ; do
-		read -rp "			Your input [Y/n] :: " choice
+		read -rp "		Your input [Y/n] :: " choice
 		if [[ $choice == "n" || $choice == "N" ]] ; then # Wrong directory
 			echo -e "${WARNING}	Wrong directory, exiting..."
 			exit $PATH_ERROR
@@ -40,22 +40,22 @@ establish(){
 			break
 		fi
 	done
-	speel .5
+	sleep .5
 
 	printf "\n--------------------------------------------------------------------------------\n"
 
 	# Now into creating the needed directories, which are the following.
-	echo -e "${INFO}	Creating directories..."
+	echo -e "${INFO}	Creating directories and KRL file..."
 	sleep .25
-	if mkdir -p sshca/{ca,hosts,users} ; then
+	if mkdir -p sshca/{ca,hosts,users} && touch sshca/krl.krl ; then
 		echo -e "${SUCCESS}	DONE."
 	else
-		echo -e "${ERROR} Could not create directories, exiting..."  
-		exit $DIRECTORY_ERROR
+		echo -e "${ERROR} Could not create directories or KRL file, exiting..."  
+		exit $ENVERR
 	fi
 	echo -e "${INFO}	The created directories are:"
-	echo -e "${INFO}		./sshca/		The root directory"
-	echo -e "${INFO}		./sshca/ca/		Contains the CA's public and private keys."
+	echo -e "${INFO}		./sshca/	The root directory"
+	echo -e "${INFO}		./sshca/ca/	Contains the CA's public and private keys."
 	echo -e "${INFO}		./sshca/hosts/	Contains the hosts' certificates."
 	echo -e "${INFO}		./sshca/users/	Contains the users' certificates."
 	sleep .5
@@ -255,7 +255,7 @@ Subsystem	sftp	/usr/libexec/sftp-server
 		read -rp "		Your input :: " ssh_path
 		if [[ -z $ssh_path ]] ; then
 			ssh_path="/etc/ssh/ssh_known_hosts"
-			echo -e "${INFO} Using default path..."
+			echo -e "${INFO}	Using default path..."
 			break
 		elif [[ ! -e "$ssh_path" ]] ; then
 			echo -e "${WARNING}	Invalid path."
@@ -270,6 +270,7 @@ Subsystem	sftp	/usr/libexec/sftp-server
 		echo -e "${INFO}	DONE"
 	else
 		echo -e "${ERROR}	Could not copy ssh_known_hosts, attempting to create a local one..."
+		sleep .5
 		if touch ./ssh_known_hosts ; then
 			echo -e "${SUCCESS}	DONE"
 		else
@@ -277,7 +278,8 @@ Subsystem	sftp	/usr/libexec/sftp-server
 			exit $PERMS_ERROR
 		fi
 	fi
-
+	sleep .5
+	
 	printf "\n--------------------------------------------------------------------------------\n"
 
 	echo -e "${INFO}	Setting it to trust the CA..."
@@ -290,6 +292,8 @@ Subsystem	sftp	/usr/libexec/sftp-server
 		exit $SED_ERROR
 	fi
 
-	echo -e "${INFO}	The setup has finished successfully, you can start signing and issuing certificates after the host and users receive their configuration files, i.e., the sshd_config and ssh_known_hosts"
+	echo -e "${INFO}	The setup has finished successfully, you can start signing and"
+	echo -e "${INFO}	issuing certificates after the host and users receive their"
+	echo -e "${INFO}	configuration files, i.e., the sshd_config and ssh_known_hosts"
 	return 0
 }

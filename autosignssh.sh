@@ -2,12 +2,15 @@
 
 # Exit codes
 SSH_ERROR=1
-PATH_ERROR=2
-#DIRECTORY_ERROR=3
+#PATH_ERROR=2
+#ENVERR=3
 #PERMS_ERROR=4
 #CD_ERROR=5
 #SED_ERROR=6
 #UNKNOWN_ERROR=7
+#SSH_SIGERR=8
+#SSH_CERTERR=9
+#SSH_REVERR=10
 
 # Importing
 #source "$(dirname $0)/utils/gen_ecdsa.sh"
@@ -25,98 +28,14 @@ PATH_ERROR=2
 BLUE='\033[97;44m'      # Dark Blue background, white text
 RED='\033[41m'       # Red background
 YELLOW='\033[48;5;214m' # Yellow background, dark text
+GREEN='\033[42m'		# Green background and white foreground
 RESET='\033[0m'      # Reset to default
 
 INFO="${BLUE}[ INFO ]${RESET}"
 ERROR="${RED}[ ERROR ]${RESET}"
 WARNING="${YELLOW}[ WARNING ]${RESET}"
+SUCCESS="${GREEN}${BLACK}[ SUCCESS ]${RESET}"  # Green background, black text
 
-manage(){
-	local condition
-	printf "\nThis script must be running in the SSH CA's home directory, i.e., in the sshca/ directory that was created earlier. If this condition is not satisfied, then you must guide the program to find that directory. Is the current directory it? [Y/n] "
-	while :
-	do
-		read -r condition
-		if [[ $condition == "n" || $condition == "N" ]]
-		then
-			printf "Enter the path to the directory (or leave blank to exit) :: "
-			while :
-			do
-				read -r path
-				if [[ -z $path ]]
-				then
-					echo Exiting...
-					exit $PATH_ERROR
-				elif cd "$path"
-				then
-					echo "Moved to the sshca/ directory"
-					break
-				else
-					printf "Invalid path. Try again :: "
-				fi
-			done
-			break
-		elif [[ -z $condition ]]
-		then
-			echo Exiting...
-			exit $PATH_ERROR
-		elif [[ $condition == "y" || $condition == "Y" ]]
-		then
-			echo Good job.
-			break
-		else
-			printf "Invalid input. Try again :: "
-		fi
-	done
-	echo "Proceeding..."
-
-	printf "\n--------------------------------------------------------------------------------\n"
-
-	local choice
-	while :
-	do
-		echo "Choose an option."
-		echo "	[0] Exit."
-		echo "	[1] Generate a private key."
-		echo "	[2] Sign on a user's key."
-		echo "	[3] Sign on a host's key."
-		echo "	[4] Verify a certificate."
-		echo "	[5] Revoke a certificate."
-		echo "	[6] Print out a certificate."
-	
-		read -rp "	Your input :: " choice
-		if [[ $choice == "0" ]]
-		then
-			exit 0
-		elif [[ $choice -gt 6 || $choice -lt 0 || -z $choice ]]
-		then
-			echo Invalid input. Try again
-		else
-			if [[ $choice == 1 ]]
-			then
-				generate_key "hosts"
-			elif [[ $choice == 2 ]]
-			then
-				sign_user
-			elif [[ $choice == 3 ]]
-			then
-				sign_host
-			elif [[ $choice == 4 ]]
-			then
-				verify
-			elif [[ $choice == 5 ]]
-			then
-				revoke
-			elif [[ $choice == 6 ]]
-			then
-				print
-			else
-				echo 
-			fi
-		fi
-	done
-	return 0
-}
 
 # main() {
 
@@ -181,6 +100,8 @@ do
 		sleep .5
 		establish
 	elif [[ $choice == "2" ]] ; then
+		# shellcheck disable=SC1091
+		source "${ASSH_ROOT}/utils/manage.sh"
 		manage
 	else
 		echo -e "${WARNING} Invalid input. Try again."		
