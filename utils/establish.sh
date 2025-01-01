@@ -47,7 +47,7 @@ establish(){
 	# Now into creating the needed directories, which are the following.
 	echo -e "${INFO}	Creating directories and KRL file..."
 	sleep .25
-	if mkdir -p sshca/{ca,hosts,users} && touch sshca/krl.krl ; then
+	if mkdir -p sshca/{ca,hosts,users} && ssh-keygen -k -f sshca/krl.krl ; then
 		echo -e "${SUCCESS}	DONE."
 	else
 		echo -e "${ERROR} Could not create directories or KRL file, exiting..."  
