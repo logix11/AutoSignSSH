@@ -34,6 +34,7 @@ RESET='\033[0m'      # Reset to default
 INFO="${BLUE}[ INFO ]${RESET}"
 ERROR="${RED}[ ERROR ]${RESET}"
 WARNING="${YELLOW}[ WARNING ]${RESET}"
+# shellcheck disable=SC2034
 SUCCESS="${GREEN}${BLACK}[ SUCCESS ]${RESET}"  # Green background, black text
 
 

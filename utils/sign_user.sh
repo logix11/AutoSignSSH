@@ -69,7 +69,7 @@ sign_user(){
 	printf "\n--------------------------------------------------------------------------------\n\n"
 
 	echo -e "${INFO}	Signing on the key."
-	if $command &> /dev/null ; then # Run it and send the output to null
+	if $command ; then # Run it and send the output to null
 		echo -e "${SUCCESS}	DONE."
 	else 
 		echo -e "${ERROR}	Failed to run ssh-keygen, exiting..."

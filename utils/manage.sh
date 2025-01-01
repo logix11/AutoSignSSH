@@ -24,6 +24,7 @@ YELLOW='\033[48;5;214m' # Yellow background, dark text
 RESET='\033[0m'      # Reset to default
 
 INFO="${BLUE}[ INFO ]${RESET}"
+# shellcheck disable=SC2034
 ERROR="${RED}[ ERROR ]${RESET}"
 WARNING="${YELLOW}[ WARNING ]${RESET}"
 
