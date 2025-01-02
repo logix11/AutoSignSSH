@@ -30,7 +30,8 @@ gen_rsa(){
 	
 	printf "\n--------------------------------------------------------------------------------\n\n"
 	
-	echo -e "${INFO}	Generating the key, it'll prompt you for an encryption passphrase."
+		echo -e "${INFO}	Generating the key, it'll prompt you for an encryption passphrase."
+		echo -e "${INFO}	Do _NOT_ set a passphrase UNLESS the key is for the client."
 	if ssh-keygen -a "$1" -f "$2"/id_rsa -b "$bits" -t rsa -Z aes128-gcm@openssh.com
 	then
 		echo -e "${SUCCESS}	Key generation: DONE."

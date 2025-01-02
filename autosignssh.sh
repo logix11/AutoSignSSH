@@ -11,6 +11,7 @@ SSH_ERROR=1
 #SSH_SIGERR=8
 #SSH_CERTERR=9
 #SSH_REVERR=10
+#CATERR=11
 
 # Importing
 #source "$(dirname $0)/utils/gen_ecdsa.sh"

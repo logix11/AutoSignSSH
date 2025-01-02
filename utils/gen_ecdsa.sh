@@ -24,6 +24,7 @@ gen_ecdsa(){
 			printf "\n--------------------------------------------------------------------------------\n\n"
 	
 			echo -e "${INFO}	Generating the key, it'll prompt you for an encryption passphrase."
+			echo -e "${INFO}	Do _NOT_ set a passphrase UNLESS the key is for the client."
 			if [[ $bit == 1 ]] ; then
 				bit=256
 			elif [[ $bit -gt 2 ]] ; then

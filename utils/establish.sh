@@ -6,8 +6,7 @@ PATH_ERROR=2
 ENVERR=3
 PERMS_ERROR=4
 CD_ERROR=5
-SED_ERROR=6
-#UNKNOWN_ERROR=7
+CATERR=11
 
 # Define color variables
 BLUE='\033[97;44m'      # Dark Blue background, white text
@@ -153,8 +152,6 @@ ListenAddress	::
 
 # Host keys
 
-# Host certificates
-
 # Ciphers and keying
 #RekeyLimit default none
 # The defaults are ridiculous.
@@ -174,12 +171,11 @@ MaxAuthTries			6
 MaxSessions				10
 PubkeyAuthentication 	yes
 # This is important in our configuration
-TrustedUserCAKeys		$(pwd)/ca_user_key.pub
+TrustedUserCAKeys		$(pwd)/ca/ca_user_key.pub
 
 # The default is to check both .ssh/authorized_keys and .ssh/authorized_keys2
 # but this is overridden so installations will only check .ssh/authorized_keys
-#AuthorizedKeysFile	.ssh/authorized_keys
-# NOTE: I have commented it because we'll use certificates instead of keys
+AuthorizedKeysFile	.ssh/authorized_keys
 
 #AuthorizedPrincipalsFile none
 
@@ -202,7 +198,9 @@ PermitEmptyPasswords no
 # the system's configuration, this may involve passwords, challenge-response,
 # one-time passwords or some combination of these and other methods.
 # NOTE: AutoSignSSH MAY use OTPs from PAM GA and Passwords from PAM
-KbdInteractiveAuthentication yes
+#KbdInteractiveAuthentication yes
+#UsePAM	yes
+#AuthenticationMethods	keyboard-interactive,publickey
 
 AllowAgentForwarding	no # Defaults to yes
 AllowTcpForwarding		yes # Defaults to yes
@@ -286,11 +284,11 @@ Subsystem	sftp	/usr/libexec/sftp-server
 	echo -e "${INFO}	Setting it to trust the CA..."
 	local ca_host_key ; ca_host_key=$(<ca/ca_host_key.pub)
 	read -rp "		Enter your CA's domain name (or * for any) :: " dn
-	if echo "@cert-authority ($dn) ($ca_host_key)" >> ./ssh_known_hosts ; then
+	if echo "@cert-authority $dn $ca_host_key" >> ./ssh_known_hosts ; then
 		echo -e "${SUCCESS}	DONE."
 	else
-		echo -e "${ERROR}	Could not edit on sshd_config, exiting..."
-		exit $SED_ERROR
+		echo -e "${ERROR}	Could not edit on ssh_known_hosts, exiting..."
+		exit $CATERR
 	fi
 
 	echo -e "${INFO}	The setup has finished successfully, you can start signing and"
@@ -298,3 +296,5 @@ Subsystem	sftp	/usr/libexec/sftp-server
 	echo -e "${INFO}	configuration files, i.e., the sshd_config and ssh_known_hosts"
 	return 0
 }
+##### SET USEPAM
+##### EDIT Authentica
